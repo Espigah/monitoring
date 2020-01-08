@@ -27,7 +27,7 @@ class GreetingServiceSpec extends Specification {
         def message = greetingService.message("test");
 
         expect:
-        message.test().assertResult("Hello, test")
+        message.test().assertResult("Micronaut, test")
     }
 
 
