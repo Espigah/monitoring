@@ -1,0 +1,5 @@
+profile: service
+defaultPackage: br.com.espigah
+---
+testFramework: spock
+sourceLanguage: java

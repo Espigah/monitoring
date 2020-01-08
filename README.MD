@@ -1,0 +1,1 @@
+[![Watch the video](http://i3.ytimg.com/vi/GDd6BL3wvpU/maxresdefault.jpg)](https://www.youtube.com/watch?v=GDd6BL3wvpU)

@@ -1,0 +1,38 @@
+filebeat.inputs:
+  - type: log
+    document_type: logback
+    fields:
+      server: micronaut
+    enabled: true
+    scan_frequency: 5s
+    paths:
+      - /var/log/micronaut/LogFile.log
+
+output.logstash:
+#  enabled: false
+  hosts: ["${LOGSTASH_HOST}"]
+
+#output.elasticsearch:
+#  hosts: ["elasticsearch:9200"]
+#  username: "elastic"
+#  password: "changeme"
+
+setup.kibana:
+  host: "${KIBANA_HOST}"
+  username: "${KIBANA_USERNAME}"  
+  password: "${KIBANA_PASSWORD}"  
+    
+logging:    
+  files:
+    rotateeverybytes: 10485760 # = 10MB
+    path: /var/log/filebeat
+    name: filebeat
+    keepfiles: 7
+    permissions: 0644
+  selectors: ["*"]
+  level: warning
+
+
+
+ 
+ 
