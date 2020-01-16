@@ -45,3 +45,7 @@ out/
 .project
 .settings
 .classpath
+
+!micronaut/build/libs/greeting-0.1-all.jar
+!tomcat_spring/webapps/greeting-0.0.1-SNAPSHOT.war
+!react_web/build

@@ -1,0 +1,27 @@
+FROM node:alpine as react-build
+# set working directory
+# this is the working folder in the container
+# from which the app will be running from
+WORKDIR /app
+# copy everything to /app directory
+# as opposed to on dev, in prod everything is copied to docker
+COPY . /app
+# add the node_modules folder to $PATH
+ENV PATH /app/node_modules/.bin:$PATH
+# install and cache dependencies
+RUN yarn
+#build the project for production
+RUN yarn build
+
+
+
+
+###
+FROM nginx:alpine
+COPY --from=react-build /app/build /usr/share/nginx/html
+RUN rm /etc/nginx/conf.d/default.conf
+COPY nginx/nginx.conf /etc/nginx/conf.d
+RUN apk add --update dnsmasq
+EXPOSE 80
+# start nginx 
+CMD ["nginx", "-g", "daemon off;"]

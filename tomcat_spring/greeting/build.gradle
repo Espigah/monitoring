@@ -1,0 +1,61 @@
+plugins {
+	id 'org.springframework.boot' version '2.2.2.RELEASE'
+	id 'io.spring.dependency-management' version '1.0.8.RELEASE'
+	id 'java'
+	id 'war'
+}
+
+group = 'br.com.espigah'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	compile group: 'io.micrometer', name: 'micrometer-core', version: '1.3.2'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+	runtime("io.micrometer:micrometer-registry-prometheus")
+}
+
+test {
+	useJUnitPlatform()
+}
+
+
+
+
+task dockerBuild{
+	doFirst{
+		exec {
+			executable "sh"
+			args "-c", "cd .. && docker build -t=fabriciogoncalves/elkbeat-tomcat-server . --no-cache"
+		}
+	}
+}
+
+task dockerRun {
+	doFirst{
+		exec {
+			executable "sh"
+			args "-c", "docker run -d -p 8080:8080 --name elkbeat-tomcat-server fabriciogoncalves/elkbeat-tomcat-server"
+		}
+	}
+}
+
+
+task copyBuild(type: Copy) {
+	from './build/libs/'
+	into '../webapps/'
+	include 'greeting-0.0.1-SNAPSHOT.war'
+}
+
+copyBuild.dependsOn  build
+dockerBuild.dependsOn  copyBuild
+dockerRun.dependsOn  dockerBuild

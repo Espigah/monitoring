@@ -1,1 +1,0 @@
-docker build -t=fabriciogoncalves/elkbeat-tomcat-server .

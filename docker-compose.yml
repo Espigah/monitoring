@@ -1,0 +1,227 @@
+version: "3.2"
+
+services:
+  elasticsearch:
+    container_name: elasticsearch
+    image: elasticsearch:7.5.1
+    environment:
+      - node.name=elasticsearch #https://www.elastic.co/guide/en/elasticsearch/reference/current/node.name.html
+      - cluster.name="docker-cluster" # https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster.name.html
+      - network.host=0.0.0.0
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - ELASTIC_USERNAME=elastic
+      - ELASTIC_PASSWORD=changeme
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - type: bind
+        source: ./elasticsearch/config/elasticsearch.yml
+        target: /usr/share/elasticsearch/config/elasticsearch.yml
+        read_only: true
+    networks:
+      - elk
+
+  kibana:
+    container_name: kibana
+    image: kibana:7.5.1
+    environment:
+      - ELASTIC_URL=http://elasticsearch:9200
+      - ELASTIC_USERNAME=elastic
+      - ELASTIC_PASSWORD=changeme
+    depends_on:
+      - elasticsearch
+    ports:
+      - "5601:5601"
+    networks:
+      - elk
+    volumes:
+      - type: bind
+        source: ./kibana/config/kibana.yml
+        target: /usr/share/kibana/config/kibana.yml
+        read_only: true
+
+  logstash:
+    container_name: logstash
+    image: logstash:7.5.1
+   # command: logstash -f /usr/share/logstash/config/logstash.yml
+    ports:
+      - "5044:5044"
+      - "9600:9600"
+    environment:
+      - "LS_JAVA_OPTS=-Xmx256m -Xms256m"
+      - BEATS_PORT=5044
+      - ES_HOSTS=http://elasticsearch:9200
+      - ELASTIC_USERNAME=elastic
+      - ELASTIC_PASSWORD=changeme
+    #  - path.config=null <- quebra geral!!!
+    networks:
+      - elk
+    volumes:
+      - type: bind
+        source: ./logstash/config/logstash.yml
+        target: /usr/share/logstash/config/logstash.yml
+        read_only: true
+      - type: bind
+        source: ./logstash/pipeline/
+        target: /usr/share/logstash/pipeline/
+        read_only: true
+    depends_on:
+      - elasticsearch
+#______________________
+# tomcat with filebeat
+#______________________
+  tomcat:
+    build:
+      dockerfile: dockerfile
+      context: ./tomcat_spring
+    image: fabriciogoncalves/elkbeat-tomcat-server
+    container_name: tomcat
+    hostname: tomcat
+    ports:
+      - "8080:8080"
+    volumes:
+      - tomcat_logs:/var/log/tomcat8/
+      - spring_logs:/var/log/spring/
+    networks:
+      - elk
+
+  prometheus:
+    image: prom/prometheus:v2.15.2
+    container_name: prometheus
+    volumes:
+      - type: bind
+        source: ./prometheus/prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+        read_only: true
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - 9090:9090
+    networks:
+      - elk
+    #restart: always
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    user: "104"
+    depends_on:
+      - prometheus
+    ports:
+      - 3000:3000
+    volumes:     
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    env_file:
+      - ./grafana/config.monitoring
+    networks:
+      - elk
+      
+  filebeat_tomcat:
+    container_name: filebeat_tomcat
+    image: store/elastic/filebeat:7.5.1
+    command: filebeat -e -v -path.config /etc/filebeat/
+    environment:
+      - LOGSTASH_HOST=logstash:5044
+      - KIBANA_HOST=kibana:5601
+      - KIBANA_USERNAME=elastic
+      - KIBANA_PASSWORD=changeme
+    volumes:
+      - spring_logs:/var/log/spring/
+      - type: bind
+        source: ./filebeat_tomcat/config/filebeat.yml
+        target: /etc/filebeat/filebeat.yml
+        read_only: true
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+      - logstash
+      - kibana
+
+#______________________
+# micronaut with filebeat
+#______________________
+  micronaut:
+    build:
+      dockerfile: Dockerfile
+      context: ./micronaut
+    image: fabriciogoncalves/elkbeat-micronaut-server
+    container_name: micronaut
+    hostname: micronaut
+    ports:
+      - "8081:8080"
+    volumes:
+      - micronaut_logs:/var/log/micronaut/
+    networks:
+      - elk  
+      
+  filebeat_micronaut:
+    container_name: filebeat_micronaut
+    image: store/elastic/filebeat:7.5.1
+    command: filebeat -e -v -path.config /etc/filebeat/
+    environment:
+      - LOGSTASH_HOST=logstash:5044
+      - KIBANA_HOST=kibana:5601
+      - KIBANA_USERNAME=elastic
+      - KIBANA_PASSWORD=changeme
+    volumes:
+      - micronaut_logs:/var/log/micronaut/
+      - type: bind
+        source: ./filebeat_micronaut/config/filebeat.yml
+        target: /etc/filebeat/filebeat.yml
+        read_only: true
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+      - logstash
+      - kibana   
+#______________________
+# PROXY
+#______________________  
+  nginx-proxy:
+    build:
+      dockerfile: dockerfile
+      context: ./nginx
+    image: fabriciogoncalves/elkbeat-nginx-proxy
+    container_name: nginx-proxy
+    networks:
+      - elk
+    ports:
+      - "8082:80"    
+#______________________
+# UI
+#______________________   
+  react:
+    build:
+      dockerfile: dockerfile
+      context: ./react_web
+    image: fabriciogoncalves/elkbeat-react-web
+    container_name: react
+    ports:
+      - "4321:80"
+    networks:
+      - elk
+    depends_on:  
+      - micronaut
+      - tomcat
+
+
+networks:
+  elk:
+    driver: bridge
+
+volumes:
+  tomcat_logs:
+  spring_logs:
+  micronaut_logs:

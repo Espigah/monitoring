@@ -71,23 +71,27 @@ task dockerBuild{
     doFirst{
         exec {
             executable "sh"
-            args "-c", "docker build -t=fabriciogoncalves/micronaut-greeting-server ."
+            args "-c", "cd .. && docker build -t=fabriciogoncalves/elkbeat-micronaut-server ./ --no-cache"
         }
     }
 }
-
-
-
 
 task dockerRun {
     doFirst{
         exec {
             executable "sh"
-            args "-c", "docker run -ti --rm -p 8080:8080 --name micronaut-greeting-server fabriciogoncalves/micronaut-greeting-server"
+            args "-c", "docker run -d -p 8080:8080 --name elkbeat-micronaut-server fabriciogoncalves/elkbeat-micronaut-server"
         }
     }
 }
 
 
-dockerBuild.dependsOn  build
+task copyBuild(type: Copy) {
+    from './build/libs/'
+    into '../build/libs/'
+    include 'greeting-0.1-all.jar'
+}
+
+copyBuild.dependsOn  build
+dockerBuild.dependsOn  copyBuild
 dockerRun.dependsOn  dockerBuild

@@ -4,6 +4,7 @@ micronaut:
     name: greeting
   server:
     port: 8080
+   
 
 ---
 micronaut:
