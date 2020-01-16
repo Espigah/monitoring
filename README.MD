@@ -5,7 +5,7 @@
 
 # Propósito
 
-Mostrar como é possível fazer integração de diversas aplicação com docker/docker-composer.
+Mostrar como é possível fazer integração de diversas aplicações com docker/docker-composer.
 (Gastei o menor termpo possível nas aplicações. Aplicações mais redondas ficaram no [projeto stock](https://github.com/Espigah/stock) )
 
 ## Integrações
@@ -24,8 +24,11 @@ Mostrar como é possível fazer integração de diversas aplicação com docker/
 # Links
 
 Kibana -> http://localhost:5601/
+
 Prometheus -> http://localhost:9090/
+
 Grafana -> http://localhost:3000/
+
 React -> http://localhost:4321/
 
 
